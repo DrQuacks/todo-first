@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 
-const app = express();
+export const app = express();
 app.use(cors());
 app.use(express.json());
 
@@ -54,5 +54,7 @@ app.delete('/todos/:id', (req: Request, res: Response) => {
   res.status(204).send();
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`API http://localhost:${port}`));
+if (require.main === module) {
+    const port = process.env.PORT || 4000;
+    app.listen(port, () => console.log(`API http://localhost:${port}`));
+}
