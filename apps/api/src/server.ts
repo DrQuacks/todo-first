@@ -58,3 +58,8 @@ if (require.main === module) {
     const port = process.env.PORT || 4000;
     app.listen(port, () => console.log(`API http://localhost:${port}`));
 }
+
+export function _resetForTests() {
+    todos = [];
+    nextId = 1;
+  }
