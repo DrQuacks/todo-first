@@ -1,6 +1,9 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { pool } from './db';
+import { db } from './drizzle';
+import { todos } from './schema';
+import { desc } from 'drizzle-orm';
 
 export const app = express();
 app.use(cors());
@@ -9,17 +12,20 @@ app.use(express.json());
 // Domain model (not required for typing req/res, just nice to have)
 type Todo = { id: number; title: string; completed: boolean };
 
-let todos: Todo[] = [];
-let nextId = 1;
+// let todos: Todo[] = [];
+// let nextId = 1;
 
 // Health
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-// GET /todos
+// GET /todos (Drizzle)
 app.get('/todos', async (_req: Request, res: Response) => {
-    const { rows } = await pool.query('SELECT id, title, completed FROM todos ORDER BY id DESC;');
+    const rows = await db
+      .select({ id: todos.id, title: todos.title, completed: todos.completed })
+      .from(todos)
+      .orderBy(desc(todos.id));
     res.json(rows);
 });
 
