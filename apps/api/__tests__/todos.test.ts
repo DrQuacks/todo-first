@@ -1,8 +1,24 @@
 import request from 'supertest';
-import { app, _resetForTests } from '../src/server';
+import { app } from '../src/server';
+import { resetDbForTests, closeDb } from '../src/db';
+import type { Server } from 'node:http';
 
-beforeEach(() => _resetForTests());
+let server: Server;
 
+beforeAll(() => {
+  // listen on an ephemeral port (0 picks a free one)
+  server = app.listen(0);
+});
+
+afterAll(async () => {
+  // close HTTP server first, then DB pool
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await closeDb();
+});
+
+beforeEach(async () => {
+    await resetDbForTests();
+});
 describe('Todos API', () => {
   it('health returns ok', async () => {
     const res = await request(app).get('/health');

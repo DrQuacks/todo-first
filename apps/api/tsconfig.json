@@ -12,7 +12,7 @@
     "target": "esnext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "types": [],
+    "types": ["node", "jest"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],

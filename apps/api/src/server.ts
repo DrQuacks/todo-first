@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { pool } from './db';
 
 export const app = express();
 app.use(cors());
@@ -16,50 +17,57 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-// List
-app.get('/todos', (_req: Request, res: Response) => {
-  res.json(todos);
+// GET /todos
+app.get('/todos', async (_req: Request, res: Response) => {
+    const { rows } = await pool.query('SELECT id, title, completed FROM todos ORDER BY id DESC;');
+    res.json(rows);
 });
 
-// Create (req.body is still any in this option)
-app.post('/todos', (req: Request, res: Response) => {
-  const title = String(req.body?.title ?? '').trim();
-  if (!title) return res.status(400).json({ error: 'title required' });
+// POST /todos
+app.post('/todos', async (req: Request, res: Response) => {
+const title = String(req.body?.title ?? '').trim();
+if (!title) return res.status(400).json({ error: 'title required' });
 
-  const todo: Todo = { id: nextId++, title, completed: false };
-  todos.unshift(todo);
-  res.status(201).json(todo);
+const { rows } = await pool.query(
+    'INSERT INTO todos (title) VALUES ($1) RETURNING id, title, completed;',
+    [title]
+);
+res.status(201).json(rows[0]);
 });
 
-// Update
-app.patch('/todos/:id', (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+// PATCH /todos/:id
+app.patch('/todos/:id', async (req: Request, res: Response) => {
+const id = Number(req.params.id);
+if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
 
-  const t = todos.find(x => x.id === id);
-  if (!t) return res.status(404).json({ error: 'not found' });
+const fields: string[] = [];
+const values: any[] = [];
+let i = 1;
+if (typeof req.body?.title === 'string') { fields.push(`title = $${i++}`); values.push(req.body.title); }
+if (typeof req.body?.completed === 'boolean') { fields.push(`completed = $${i++}`); values.push(req.body.completed); }
+if (!fields.length) return res.status(400).json({ error: 'no fields' });
 
-  if (typeof req.body?.title === 'string') t.title = req.body.title;
-  if (typeof req.body?.completed === 'boolean') t.completed = req.body.completed;
-
-  res.json(t);
+values.push(id);
+const { rows } = await pool.query(
+    `UPDATE todos SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $${i}
+    RETURNING id, title, completed;`,
+    values
+);
+if (!rows.length) return res.status(404).json({ error: 'not found' });
+res.json(rows[0]);
 });
 
-// Delete
-app.delete('/todos/:id', (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
-
-  todos = todos.filter(x => x.id !== id);
-  res.status(204).send();
+// DELETE /todos/:id
+app.delete('/todos/:id', async (req: Request, res: Response) => {
+const id = Number(req.params.id);
+if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+await pool.query('DELETE FROM todos WHERE id = $1;', [id]);
+res.status(204).send();
 });
+
 
 if (require.main === module) {
     const port = process.env.PORT || 4000;
     app.listen(port, () => console.log(`API http://localhost:${port}`));
 }
-
-export function _resetForTests() {
-    todos = [];
-    nextId = 1;
-  }
