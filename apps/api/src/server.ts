@@ -3,7 +3,7 @@ import cors from 'cors';
 import { pool } from './db';
 import { db } from './drizzle';
 import { todos } from './schema';
-import { desc } from 'drizzle-orm';
+import { eq , desc } from 'drizzle-orm';
 
 export const app = express();
 app.use(cors());
@@ -31,45 +31,46 @@ app.get('/todos', async (_req: Request, res: Response) => {
 
 // POST /todos
 app.post('/todos', async (req: Request, res: Response) => {
-const title = String(req.body?.title ?? '').trim();
-if (!title) return res.status(400).json({ error: 'title required' });
+    const title = String(req.body?.title ?? '').trim();
+    if (!title) return res.status(400).json({ error: 'title required' });
 
-const { rows } = await pool.query(
-    'INSERT INTO todos (title) VALUES ($1) RETURNING id, title, completed;',
-    [title]
-);
-res.status(201).json(rows[0]);
+    const rows = await db
+        .insert(todos)
+        .values({ title }) // completed defaults to false via schema
+        .returning({ id: todos.id, title: todos.title, completed: todos.completed });
+
+    res.status(201).json(rows[0]);
 });
 
 // PATCH /todos/:id
 app.patch('/todos/:id', async (req: Request, res: Response) => {
-const id = Number(req.params.id);
-if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
 
-const fields: string[] = [];
-const values: any[] = [];
-let i = 1;
-if (typeof req.body?.title === 'string') { fields.push(`title = $${i++}`); values.push(req.body.title); }
-if (typeof req.body?.completed === 'boolean') { fields.push(`completed = $${i++}`); values.push(req.body.completed); }
-if (!fields.length) return res.status(400).json({ error: 'no fields' });
+    const patch: Partial<{ title: string; completed: boolean }> = {};
+    if (typeof req.body?.title === 'string') patch.title = req.body.title;
+    if (typeof req.body?.completed === 'boolean') patch.completed = req.body.completed;
+  
+    if (!Object.keys(patch).length) {
+      return res.status(400).json({ error: 'no fields' });
+    }
+  
+    const rows = await db
+      .update(todos)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(todos.id, id))
+      .returning({ id: todos.id, title: todos.title, completed: todos.completed });
 
-values.push(id);
-const { rows } = await pool.query(
-    `UPDATE todos SET ${fields.join(', ')}, updated_at = NOW()
-    WHERE id = $${i}
-    RETURNING id, title, completed;`,
-    values
-);
-if (!rows.length) return res.status(404).json({ error: 'not found' });
-res.json(rows[0]);
+    if (!rows.length) return res.status(404).json({ error: 'not found' });
+    res.json(rows[0]);
 });
 
 // DELETE /todos/:id
 app.delete('/todos/:id', async (req: Request, res: Response) => {
-const id = Number(req.params.id);
-if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
-await pool.query('DELETE FROM todos WHERE id = $1;', [id]);
-res.status(204).send();
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+    await db.delete(todos).where(eq(todos.id, id));
+    res.status(204).send();
 });
 
 
