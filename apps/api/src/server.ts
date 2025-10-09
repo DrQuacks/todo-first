@@ -4,16 +4,15 @@ import { pool } from './db';
 import { db } from './drizzle';
 import { todos } from './schema';
 import { eq , desc } from 'drizzle-orm';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@as-integrations/express5';
+import bodyParser from 'body-parser';
+import { typeDefs, resolvers } from './graphql';
 
 export const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Domain model (not required for typing req/res, just nice to have)
-type Todo = { id: number; title: string; completed: boolean };
-
-// let todos: Todo[] = [];
-// let nextId = 1;
 
 // Health
 app.get('/health', (_req: Request, res: Response) => {
@@ -72,6 +71,21 @@ app.delete('/todos/:id', async (req: Request, res: Response) => {
     await db.delete(todos).where(eq(todos.id, id));
     res.status(204).send();
 });
+
+async function bootstrap() {
+    const apollo = new ApolloServer({ typeDefs, resolvers });
+    await apollo.start();
+  
+    app.use('/graphql', bodyParser.json(), expressMiddleware(apollo));
+  
+    if (require.main === module) {
+      const port = process.env.PORT || 4000;
+      app.listen(port, () => {
+        console.log(`API http://localhost:${port}  |  GraphQL http://localhost:${port}/graphql`);
+      });
+    }
+}
+bootstrap();
 
 
 if (require.main === module) {

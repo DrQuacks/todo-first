@@ -3,6 +3,7 @@ import { db } from './drizzle';
 import { todos } from './schema';
 import { desc, eq } from 'drizzle-orm';
 
+
 export const typeDefs = gql`
   type Todo {
     id: Int!
