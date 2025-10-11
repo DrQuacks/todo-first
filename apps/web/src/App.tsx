@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DataClient , Todo } from './dataClient';
 import { restClient } from './dataClient.rest';
 import { gqlClient } from './dataClient.gql';
+import { API_BASE } from './dataClient';
 
 type Mode = 'REST' | 'GraphQL';
 
@@ -12,6 +13,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem('mode') as Mode) || 'REST');
   useEffect(() => { localStorage.setItem('mode', mode); }, [mode]);
   const client: DataClient = useMemo(() => (mode === 'REST' ? restClient : gqlClient), [mode]);
+  const endpoint = mode === 'REST' ? `${API_BASE}/todos` : `${API_BASE}/graphql`;
   const qc = useQueryClient();
   const { data: todos = [], isLoading, isError, error } = useQuery({ queryKey: ['todos',mode], queryFn: () => client.listTodos() });
 
@@ -55,7 +57,16 @@ export default function App() {
   return (
     <div style={{ maxWidth: 560, margin: '40px auto', fontFamily: 'system-ui' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1>Todos</h1>
+        <div>
+          <h1 style={{ margin: 0 }}>Todos</h1>
+          {/* Endpoint badge */}
+          <div style={{
+            display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999,
+            background: '#eef', fontSize: 12, color: '#334', border: '1px solid #ccd'
+          }}>
+            Using: <strong>{mode}</strong> · <code>{endpoint}</code>
+          </div>
+        </div>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span>Data Source:</span>
           <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
