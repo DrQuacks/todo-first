@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { pool } from './db';
 import { db } from './drizzle';
 import { todos } from './schema';
 import { eq , desc } from 'drizzle-orm';
@@ -8,6 +7,8 @@ import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@as-integrations/express5';
 import bodyParser from 'body-parser';
 import { typeDefs, resolvers } from './graphql';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express';
 
 export const app = express();
 app.use(cors());
@@ -88,14 +89,21 @@ app.delete('/todos/:id', async (req: Request, res: Response) => {
 // bootstrap();
 
 export const ready = (async function bootstrap() {
-    const apollo = new ApolloServer({ typeDefs, resolvers });
-    await apollo.start();
-    app.use('/graphql', bodyParser.json(), expressMiddleware(apollo));
+  // 1) Apollo (move it to /graphql-apollo so we can free /graphql for the new engine)
+  const apollo = new ApolloServer({ typeDefs, resolvers });
+  await apollo.start();
+  app.use('/graphql-apollo', bodyParser.json(), expressMiddleware(apollo));
+
+  // 2) graphql-http (spec-compliant, lightweight) at /graphql
+  const schema = makeExecutableSchema({ typeDefs, resolvers });
+  app.all('/graphql', createHttpHandler({ schema }));
   
     if (require.main === module) {
       const port = process.env.PORT || 4000;
       app.listen(port, () => {
-        console.log(`API http://localhost:${port} | GraphQL http://localhost:${port}/graphql`);
+        console.log(`REST        http://localhost:${port}/todos`);
+        console.log(`GraphQL     http://localhost:${port}/graphql        (graphql-http)`);
+        console.log(`GraphQL     http://localhost:${port}/graphql-apollo (Apollo)`);
       });
     }
   })();
