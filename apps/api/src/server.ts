@@ -73,21 +73,6 @@ app.delete('/todos/:id', async (req: Request, res: Response) => {
     res.status(204).send();
 });
 
-// async function bootstrap() {
-//     const apollo = new ApolloServer({ typeDefs, resolvers });
-//     await apollo.start();
-  
-//     app.use('/graphql', bodyParser.json(), expressMiddleware(apollo));
-  
-//     if (require.main === module) {
-//       const port = process.env.PORT || 4000;
-//       app.listen(port, () => {
-//         console.log(`API http://localhost:${port}  |  GraphQL http://localhost:${port}/graphql`);
-//       });
-//     }
-// }
-// bootstrap();
-
 export const ready = (async function bootstrap() {
   // 1) Apollo (move it to /graphql-apollo so we can free /graphql for the new engine)
   const apollo = new ApolloServer({ typeDefs, resolvers });
