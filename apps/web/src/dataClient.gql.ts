@@ -1,16 +1,12 @@
-import { API_BASE, type DataClient, type Todo } from './dataClient';
+import { jfetch, type DataClient, type Todo } from './dataClient';
 
 async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${API_BASE}/graphql`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
-  if (json.errors?.length) {
-    throw new Error(json.errors[0].message || 'GraphQL error');
-  }
-  return json.data as T;
+    const payload = await jfetch<{ data?: T; errors?: { message: string }[] }>('/graphql', {
+        method: 'POST',
+        body: { query, variables },
+      });
+      if (payload.errors?.length) throw new Error(payload.errors[0].message || 'GraphQL error');
+      return payload.data as T;
 }
 
 export const gqlClient: DataClient = {
