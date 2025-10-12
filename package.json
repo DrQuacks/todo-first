@@ -1,0 +1,11 @@
+{
+    "name": "todo-monorepo",
+    "private": true,
+    "workspaces": ["apps/*", "packages/*"],
+    "scripts": {
+      "build": "tsc -b",
+      "build:watch": "tsc -b -w",
+      "api": "npm --prefix apps/api run dev",
+      "web": "npm --prefix apps/web run dev"
+    }
+  }

@@ -1,0 +1,12 @@
+{
+    "files": [],
+    "references": [
+      { "path": "packages/validation" },
+      { "path": "apps/api" },
+      { "path": "apps/web" }
+    ],
+    "compilerOptions": {
+      "composite": true
+    }
+  }
+  
