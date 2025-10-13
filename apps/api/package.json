@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn -r tsconfig-paths/register src/server.ts",
     "test": "jest"
   },
   "keywords": [],
@@ -22,7 +22,8 @@
     "graphql": "^16.11.0",
     "graphql-http": "^1.22.4",
     "graphql-tag": "^2.12.6",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "@acme/validation": "workspace:*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

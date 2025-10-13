@@ -9,6 +9,7 @@ import bodyParser from 'body-parser';
 import { typeDefs, resolvers } from './graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express';
+import { TodoCreateSchema, TodoUpdateSchema, TodoOutputSchema } from "@acme/validation";
 
 export const app = express();
 app.use(cors());

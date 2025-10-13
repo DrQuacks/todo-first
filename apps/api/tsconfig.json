@@ -43,6 +43,10 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@acme/validation": ["../../packages/validation/src"]
+    }
   },
   "include": ["src", "tests", "**/*.test.ts"]
 }
