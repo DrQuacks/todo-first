@@ -9,6 +9,27 @@ import bodyParser from 'body-parser';
 import { typeDefs, resolvers } from './graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express';
+import { TodoCreateSchema, TodoUpdateSchema } from './validation';
+import type { NextFunction } from 'express';
+import type { ZodIssue } from 'zod';
+
+function validateBody(schema: { safeParse: (x: unknown) => any }) {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'validation_error',
+          issues: parsed.error.issues.map((i: ZodIssue) => ({
+            path: i.path.join('.'),
+            message: i.message,
+            code: i.code,
+          })),
+        });
+      }
+      (req as any).validated = parsed.data;
+      next();
+    };
+  }
 
 export const app = express();
 app.use(cors());
@@ -30,9 +51,8 @@ app.get('/todos', async (_req: Request, res: Response) => {
 });
 
 // POST /todos
-app.post('/todos', async (req: Request, res: Response) => {
-    const title = String(req.body?.title ?? '').trim();
-    if (!title) return res.status(400).json({ error: 'title required' });
+app.post('/todos', validateBody(TodoCreateSchema), async (req: Request, res: Response) => {
+    const { title } = (req as any).validated as { title: string };
 
     const rows = await db
         .insert(todos)
@@ -43,17 +63,11 @@ app.post('/todos', async (req: Request, res: Response) => {
 });
 
 // PATCH /todos/:id
-app.patch('/todos/:id', async (req: Request, res: Response) => {
+app.patch('/todos/:id', validateBody(TodoUpdateSchema), async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
 
-    const patch: Partial<{ title: string; completed: boolean }> = {};
-    if (typeof req.body?.title === 'string') patch.title = req.body.title;
-    if (typeof req.body?.completed === 'boolean') patch.completed = req.body.completed;
-  
-    if (!Object.keys(patch).length) {
-      return res.status(400).json({ error: 'no fields' });
-    }
+    const patch = (req as any).validated as { title?: string; completed?: boolean };
   
     const rows = await db
       .update(todos)
