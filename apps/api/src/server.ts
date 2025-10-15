@@ -9,7 +9,7 @@ import bodyParser from 'body-parser';
 import { typeDefs, resolvers } from './graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express';
-import { TodoCreateSchema, TodoUpdateSchema } from './validation';
+import { TodoCreateSchema, TodoUpdateSchema, IdParamSchema } from './validation';
 import type { NextFunction } from 'express';
 import type { ZodIssue } from 'zod';
 
@@ -29,7 +29,21 @@ function validateBody(schema: { safeParse: (x: unknown) => any }) {
       (req as any).validated = parsed.data;
       next();
     };
-  }
+}
+
+function validateParams(schema: any) {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const parsed = schema.safeParse(req.params);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'validation_error',
+          issues: parsed.error.issues,
+        });
+      }
+      (req as any).paramsValidated = parsed.data;
+      next();
+    };
+}
 
 export const app = express();
 app.use(cors());
@@ -63,10 +77,8 @@ app.post('/todos', validateBody(TodoCreateSchema), async (req: Request, res: Res
 });
 
 // PATCH /todos/:id
-app.patch('/todos/:id', validateBody(TodoUpdateSchema), async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
-
+app.patch('/todos/:id', validateParams(IdParamSchema), validateBody(TodoUpdateSchema), async (req: Request, res: Response) => {
+    const { id } = (req as any).paramsValidated;
     const patch = (req as any).validated as { title?: string; completed?: boolean };
   
     const rows = await db
