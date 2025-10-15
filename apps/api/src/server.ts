@@ -9,7 +9,7 @@ import bodyParser from 'body-parser';
 import { typeDefs, resolvers } from './graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express';
-import { TodoCreateSchema, TodoUpdateSchema, IdParamSchema } from './validation';
+import { TodoCreateSchema, TodoUpdateSchema, IdParamSchema, TodosQuerySchema } from './validation';
 import type { NextFunction } from 'express';
 import type { ZodIssue } from 'zod';
 
@@ -41,6 +41,24 @@ function validateParams(schema: any) {
         });
       }
       (req as any).paramsValidated = parsed.data;
+      next();
+    };
+}
+
+function validateQuery(schema: { safeParse: (x: unknown) => any }) {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const parsed = schema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "validation_error",
+          issues: parsed.error.issues.map((i: ZodIssue) => ({
+            path: i.path.join("."),
+            message: i.message,
+            code: i.code,
+          })),
+        });
+      }
+      (req as any).queryValidated = parsed.data; // typed, coerced values
       next();
     };
 }
