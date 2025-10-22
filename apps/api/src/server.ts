@@ -12,6 +12,7 @@ import { createHandler as createHttpHandler } from 'graphql-http/lib/use/express
 import { TodoCreateSchema, TodoUpdateSchema, IdParamSchema, TodosQuerySchema } from './validation';
 import type { NextFunction } from 'express';
 import type { ZodIssue } from 'zod';
+import helmet from "helmet";
 
 function validateBody(schema: { safeParse: (x: unknown) => any }) {
     return (req: Request, res: Response, next: NextFunction) => {
@@ -66,6 +67,7 @@ function validateQuery(schema: { safeParse: (x: unknown) => any }) {
 export const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(helmet());
 
 
 // Health
