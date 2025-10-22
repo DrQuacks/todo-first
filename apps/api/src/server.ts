@@ -13,6 +13,8 @@ import { TodoCreateSchema, TodoUpdateSchema, IdParamSchema, TodosQuerySchema } f
 import type { NextFunction } from 'express';
 import type { ZodIssue } from 'zod';
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
 
 function validateBody(schema: { safeParse: (x: unknown) => any }) {
     return (req: Request, res: Response, next: NextFunction) => {
@@ -64,11 +66,23 @@ function validateQuery(schema: { safeParse: (x: unknown) => any }) {
     };
 }
 
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,   // 15 minutes
+    max: 100,                   // limit each IP to 100 requests per window
+    standardHeaders: true,      // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false,       // Disable `X-RateLimit-*` headers
+  });
+
 export const app = express();
-app.use(cors());
+app.use(cors({
+    origin: process.env.WEB_ORIGIN || "http://localhost:3000",
+    methods: ["GET","POST","PATCH","DELETE","OPTIONS"],
+    allowedHeaders: ["Content-Type","Authorization"],
+    credentials: true,  // if you allow cookies/auth headers
+  }));
 app.use(express.json());
 app.use(helmet());
-
+app.use(limiter);
 
 // Health
 app.get('/health', (_req: Request, res: Response) => {
