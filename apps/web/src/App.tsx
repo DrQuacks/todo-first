@@ -5,6 +5,7 @@ import type { DataClient , Todo } from './dataClient';
 import { restClient } from './dataClient.rest';
 import { gqlClient } from './dataClient.gql';
 import { API_BASE } from './dataClient';
+import CryptoTicker from './features/realtime/CryptoTicker';
 
 type Mode = 'REST' | 'GraphQL';
 
@@ -55,45 +56,48 @@ export default function App() {
   });
 
   return (
-    <div style={{ maxWidth: 560, margin: '40px auto', fontFamily: 'system-ui' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Todos</h1>
-          {/* Endpoint badge */}
-          <div style={{
-            display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999,
-            background: '#eef', fontSize: 12, color: '#334', border: '1px solid #ccd'
-          }}>
-            Using: <strong>{mode}</strong> · <code>{endpoint}</code>
+    <div>
+      <div style={{ maxWidth: 560, margin: '40px auto', fontFamily: 'system-ui' }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h1 style={{ margin: 0 }}>Todos</h1>
+            {/* Endpoint badge */}
+            <div style={{
+              display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999,
+              background: '#eef', fontSize: 12, color: '#334', border: '1px solid #ccd'
+            }}>
+              Using: <strong>{mode}</strong> · <code>{endpoint}</code>
+            </div>
           </div>
-        </div>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span>Data Source:</span>
-          <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-            <option value="REST">REST</option>
-            <option value="GraphQL">GraphQL</option>
-          </select>
-        </label>
-      </header>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span>Data Source:</span>
+            <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
+              <option value="REST">REST</option>
+              <option value="GraphQL">GraphQL</option>
+            </select>
+          </label>
+        </header>
 
-      <Form onAdd={(title) => add.mutate(title)} pending={add.isPending} />
+        <Form onAdd={(title) => add.mutate(title)} pending={add.isPending} />
 
-      {isLoading && <p>Loading…</p>}
-      {isError && <p style={{ color: 'crimson' }}>{(error as Error).message}</p>}
+        {isLoading && <p>Loading…</p>}
+        {isError && <p style={{ color: 'crimson' }}>{(error as Error).message}</p>}
 
-      <ul>
-        {todos.map((t) => (
-          <li key={t.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={t.completed}
-              onChange={(e) => toggle.mutate({ id: t.id, completed: e.target.checked })}
-            />
-            <span style={{ textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</span>
-            <button onClick={() => remove.mutate(t.id)} aria-label={`delete ${t.title}`}>delete</button>
-          </li>
-        ))}
-      </ul>
+        <ul>
+          {todos.map((t) => (
+            <li key={t.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={t.completed}
+                onChange={(e) => toggle.mutate({ id: t.id, completed: e.target.checked })}
+              />
+              <span style={{ textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</span>
+              <button onClick={() => remove.mutate(t.id)} aria-label={`delete ${t.title}`}>delete</button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <CryptoTicker />
     </div>
   );
 }
