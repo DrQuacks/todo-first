@@ -97,7 +97,7 @@ export default function App() {
           ))}
         </ul>
       </div>
-      <CryptoTicker />
+      <CryptoTicker assets={["bitcoin", "ethereum", "solana"]} compact />
     </div>
   );
 }
