@@ -69,5 +69,10 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
     };
   }, [key]);
 
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug("[ws] status =>", status);
+  }, [status]);
+
   return { status, prices, assets: list };
 }

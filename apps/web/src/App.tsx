@@ -6,12 +6,15 @@ import { restClient } from './dataClient.rest';
 import { gqlClient } from './dataClient.gql';
 import { API_BASE } from './dataClient';
 import CryptoTicker from './features/realtime/CryptoTicker';
+import AssetsPicker from "./features/realtime/AssetsPicker";
+
 
 type Mode = 'REST' | 'GraphQL';
 
 
 export default function App() {
   const [mode, setMode] = useState<Mode>(() => (localStorage.getItem('mode') as Mode) || 'REST');
+  const [assets, setAssets] = useState<string[]>(["bitcoin", "ethereum"]);
   useEffect(() => { localStorage.setItem('mode', mode); }, [mode]);
   const client: DataClient = useMemo(() => (mode === 'REST' ? restClient : gqlClient), [mode]);
   const endpoint = mode === 'REST' ? `${API_BASE}/todos` : `${API_BASE}/graphql`;
@@ -98,6 +101,7 @@ export default function App() {
         </ul>
       </div>
       <CryptoTicker assets={["bitcoin", "ethereum", "solana"]} compact />
+      <AssetsPicker selected={assets} onChange={setAssets} />
     </div>
   );
 }
