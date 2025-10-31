@@ -100,7 +100,7 @@ export default function App() {
           ))}
         </ul>
       </div>
-      <CryptoTicker assets={["bitcoin", "ethereum", "solana"]} compact />
+      <CryptoTicker assets={assets} compact />
       <AssetsPicker selected={assets} onChange={setAssets} />
     </div>
   );

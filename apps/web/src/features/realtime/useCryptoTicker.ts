@@ -19,6 +19,16 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
   // A stable key that doesn’t change when order changes upstream
   const key = list.join(",");
 
+  const connIdRef = useRef(0);
+
+  useEffect(() => {
+    console.log("[ws] asset set key:", key);
+  }, [key]);
+  
+  useEffect(() => {
+    console.log("[ws] status =>", status);
+  }, [status]);
+
   useEffect(() => {
     if (list.length === 0) {
         setStatus("idle");
@@ -26,15 +36,29 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
         return;
     }
 
+    const myId = ++connIdRef.current;
+
     closedByUs.current = false;
     setStatus("connecting");
     const url = `wss://ws.coincap.io/prices?assets=${encodeURIComponent(key)}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
-    ws.onopen = () => setStatus("open");
+    const isCurrent = () => connIdRef.current === myId;
 
+    ws.onopen = () => {
+        if (!isCurrent()) return;
+        setStatus("open");
+        // optional: clear prices on new set
+        setPrices(prev => {
+          // keep only keys in the current list
+          const next: Prices = {};
+          for (const a of list) if (prev[a] != null) next[a] = prev[a];
+          return next;
+        });
+      };
     ws.onmessage = (evt) => {
+        if (!isCurrent()) return;
         try {
             const patch = JSON.parse(evt.data as string) as Record<string, string>;
             setPrices(prev => {
@@ -51,11 +75,13 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
     };
 
     ws.onerror = () => {
+        if (!isCurrent()) return;
         // error often followed by onclose; keep UI calm
         setStatus((s) => (s === "closed" ? s : "error"));
       };
   
     ws.onclose = () => {
+        if (!isCurrent()) return;
         if (closedByUs.current) return; // StrictMode double-unmount
         setStatus("closed");
     };
