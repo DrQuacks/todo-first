@@ -6,6 +6,7 @@ type Prices = Record<string, PriceCell | undefined>;
 export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
   const [status, setStatus] = useState<Status>("idle");
   const [prices, setPrices] = useState<Prices>({});
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const closedByUs = useRef(false);
 
@@ -98,6 +99,7 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
                 }
                 return next;
             });
+            setLastUpdate(new Date());
         } catch {
         // ignore parse errors for this minimal example
       }
@@ -129,5 +131,5 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
     console.debug("[ws] status =>", status);
   }, [status]);
 
-  return { status, prices, assets: list };
+  return { status, prices, assets: list, lastUpdate };
 }

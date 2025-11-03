@@ -13,7 +13,7 @@ export default function CryptoTicker({
   assets = ["bitcoin", "ethereum", "solana"],
   compact = true,
 }: { assets?: string[]; compact?: boolean }) {
-  const { status, prices, assets: active } = useCryptoTicker(assets);
+  const { status, prices, assets: active, lastUpdate } = useCryptoTicker(assets);
   const color = statusColor[status] ?? "#999";
 
   return (
@@ -46,6 +46,11 @@ export default function CryptoTicker({
         />
         <strong style={{ textTransform: "capitalize" }}>{status}</strong>
       </div>
+      <div style={{ fontSize: 11, color: "#666", textAlign: "right" }}>
+            {lastUpdate
+            ? `Last tick: ${lastUpdate.toLocaleTimeString()}`
+            : "Waiting for first tick…"}
+        </div>
 
       {/* prices for currently selected assets, in order */}
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
