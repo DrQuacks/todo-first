@@ -7,7 +7,6 @@ const statusColor: Record<string, string> = {
   open: "#22a06b",
   closed: "#666",
   error: "#d64545",
-  retrying: "#ff8a00" // only if you add retries later
 };
 
 export default function CryptoTicker({
@@ -15,8 +14,6 @@ export default function CryptoTicker({
   compact = true,
 }: { assets?: string[]; compact?: boolean }) {
   const { status, prices, assets: active } = useCryptoTicker(assets);
-
-  const entries = active.map(a => [a, prices[a]] as const);
   const color = statusColor[status] ?? "#999";
 
   return (
@@ -50,19 +47,22 @@ export default function CryptoTicker({
         <strong style={{ textTransform: "capitalize" }}>{status}</strong>
       </div>
 
-      {/* prices */}
-      {entries.length === 0 ? (
-        <div>—</div>
-      ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {entries.map(([asset, price]) => (
-            <li key={asset}>
-              {asset.slice(0, 3).toUpperCase()}:{" "}
-              {price != null ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+      {/* prices for currently selected assets, in order */}
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        {active.map((a) => {
+          const cell = prices[a];
+          const isLive = !!cell?.live;
+          const val = cell?.value;
+
+          return (
+            <li key={a} style={{ color: isLive ? "#111" : "#777" }}>
+              {a.slice(0, 3).toUpperCase()}: {val != null
+                ? val.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                : "—"}
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
     </div>
   );
 }

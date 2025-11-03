@@ -133,6 +133,58 @@ app.delete('/todos/:id', async (req: Request, res: Response) => {
     res.status(204).send();
 });
 
+// GET /external/prices?ids=bitcoin,ethereum,solana
+app.get('/external/prices', async (req, res) => {
+    const ids = String(req.query.ids || '').toLowerCase().trim();
+    if (!ids) return res.status(400).json({ error: 'ids required' });
+  
+    // helper: fetch with timeout
+    const fetchWithTimeout = async (url: string, ms = 3500) => {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), ms);
+      try {
+        const r = await fetch(url, { signal: ac.signal as any });
+        return r;
+      } finally {
+        clearTimeout(t);
+      }
+    };
+  
+    // 1) Try CoinCap (native JSON shape we already handle)
+    const coincapUrl = `https://api.coincap.io/v2/assets?ids=${encodeURIComponent(ids)}`;
+    try {
+      const r = await fetchWithTimeout(coincapUrl, 4000);
+      if (r.ok) {
+        const json = await r.json();
+        return res.json(json); // { data: [{ id, priceUsd, ... }] }
+      } else {
+        console.warn('[external/prices] CoinCap non-OK:', r.status);
+      }
+    } catch (e) {
+      console.warn('[external/prices] CoinCap fetch error:', (e as Error).message);
+    }
+  
+    // 2) Fallback to CoinGecko and map to CoinCap-like shape
+    try {
+      const cgUrl =
+        `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=usd`;
+      const r2 = await fetchWithTimeout(cgUrl, 4000);
+      if (!r2.ok) {
+        console.warn('[external/prices] CoinGecko non-OK:', r2.status);
+        return res.status(502).json({ error: 'upstream failed' });
+      }
+      const j = await r2.json() as Record<string, { usd?: number }>;
+      const data = Object.entries(j).map(([id, obj]) => ({
+        id,
+        priceUsd: obj.usd != null ? String(obj.usd) : undefined,
+      }));
+      return res.json({ data });
+    } catch (e) {
+      console.warn('[external/prices] CoinGecko fetch error:', (e as Error).message);
+      return res.status(502).json({ error: 'upstream fetch failed' });
+    }
+  });
+
 export const ready = (async function bootstrap() {
   // 1) Apollo (move it to /graphql-apollo so we can free /graphql for the new engine)
   const apollo = new ApolloServer({ typeDefs, resolvers });

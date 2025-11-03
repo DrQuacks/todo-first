@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
-type Prices = Record<string, number>;
-
+type PriceCell = { value: number; live: boolean }; // live=false = from REST seed
+type Prices = Record<string, PriceCell | undefined>;
 export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
   const [status, setStatus] = useState<Status>("idle");
   const [prices, setPrices] = useState<Prices>({});
@@ -45,6 +45,7 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
     wsRef.current = ws;
 
     const isCurrent = () => connIdRef.current === myId;
+    let seedAbort: AbortController | undefined;
 
     ws.onopen = () => {
         if (!isCurrent()) return;
@@ -56,7 +57,33 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
           for (const a of list) if (prev[a] != null) next[a] = prev[a];
           return next;
         });
-      };
+        // ---- REST snapshot seed (gray) ----
+        seedAbort = new AbortController();
+        fetch(`http://localhost:4000/external/prices?ids=${encodeURIComponent(key)}`, { signal: seedAbort.signal })
+            .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+            .then((payload: { data: Array<{ id: string; priceUsd: string }> }) => {
+                if (!isCurrent()) return;
+                const data = payload?.data ?? [];
+                setPrices(prev => {
+                    const next: Prices = { ...prev };
+                    for (const a of list) {
+                    const hit = data.find(d => d.id === a);
+                    if (hit?.priceUsd) {
+                        // Only set seed if we don't already have a live tick
+                        const existing = next[a];
+                        if (!existing || !existing.live) {
+                        next[a] = { value: Number(hit.priceUsd), live: false };
+                        }
+                    }
+                    }
+                    return next;
+                });
+            })
+            .catch(() => {
+            /* ignore seed errors; WS will still update */
+            }
+        );
+    };
     ws.onmessage = (evt) => {
         if (!isCurrent()) return;
         try {
@@ -64,8 +91,10 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
             setPrices(prev => {
                 const next = { ...prev };
                 for (const [k, v] of Object.entries(patch)) {
-                // only track assets we asked for
-                if (list.includes(k)) next[k] = Number(v);
+                    // only track assets we asked for
+                    if (list.includes(k)) {
+                        next[k] = { value: Number(v), live: true }; // mark as live (black)
+                    }                
                 }
                 return next;
             });
