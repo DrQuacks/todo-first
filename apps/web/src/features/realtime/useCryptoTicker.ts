@@ -6,6 +6,7 @@ type Prices = Record<string, PriceCell | undefined>;
 export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
   const [status, setStatus] = useState<Status>("idle");
   const [prices, setPrices] = useState<Prices>({});
+  const [wake, setWake] = useState(0);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const closedByUs = useRef(false);
@@ -29,6 +30,28 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
   useEffect(() => {
     console.log("[ws] status =>", status);
   }, [status]);
+
+    // 🔹 Reconnect when tab becomes active or network comes back
+    useEffect(() => {
+        const onWake = () => {
+          if (document.visibilityState === "visible" && list.length > 0) {
+            // Only bump if we're not already open/connecting
+            setStatus(s => {
+              if (s === "open" || s === "connecting") return s;
+              setWake(w => w + 1);
+              return s;
+            });
+          }
+        };
+        window.addEventListener("visibilitychange", onWake);
+        window.addEventListener("focus", onWake);
+        window.addEventListener("online", onWake);
+        return () => {
+          window.removeEventListener("visibilitychange", onWake);
+          window.removeEventListener("focus", onWake);
+          window.removeEventListener("online", onWake);
+        };
+      }, [list.length]);
 
   useEffect(() => {
     if (list.length === 0) {
@@ -124,7 +147,7 @@ export function useCryptoTicker(inputAssets: string[] = ["bitcoin"]) {
         }
         if (wsRef.current === ws) wsRef.current = null;
     };
-  }, [key]);
+  }, [key,wake]);
 
   useEffect(() => {
     // eslint-disable-next-line no-console
